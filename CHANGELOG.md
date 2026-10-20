@@ -38,6 +38,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so. `dim` now drives the schema, and startup checks the configured model
   against it. (#434)
 
+- **`cascade status` and `/health` tell an emptied index apart from a healthy
+  one.** Deleting `.index/lancedb` used to leave a store that reported perfect
+  health: the ledger lives in `.index/sqlite` and survives the delete, so every
+  file stayed `done`, the scanner enqueued nothing, `cascade status` showed
+  `done: 106` with `lag: 0`, and `/health` reported zero failures — while
+  search returned nothing. Startup now counts rows per business table and
+  compares them against the ledger. `cascade status` prints a live count per
+  table and warns when every one of them is empty; `/health` carries the
+  startup snapshot in `cascade.index_rows` and `cascade.index_emptied`.
+  Reported, not enforced: `healthy` does not flip, because these are startup
+  counts and a signal that cannot clear until the next restart is worse than a
+  number an operator can read. A fresh root, a queue still draining, and a root
+  whose markdown was all deleted are each quiet. Recovery is `everos cascade
+  rebuild`; markdown is the source of truth and is never touched. (#501, #522)
+
 ### Changed
 
 - **Startup refuses an index the configured embedding cannot have produced.**
